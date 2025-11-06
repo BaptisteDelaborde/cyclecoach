@@ -1,123 +1,93 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/week_plan.dart';
-import '../widgets/weekly_schedule_view.dart';
-import 'edit_week_screen.dart';
+import '../models/training.dart';
+import '../widgets/training_card.dart';
+import '../services/database_service.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<HomeScreen> {
-  late Box<WeekPlan> weekBox;
-  int currentWeekIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    weekBox = Hive.box<WeekPlan>('week_plans');
-
-    if (weekBox.isEmpty) {
-      _createFirstWeek();
-    }
-  }
-
-  void _createFirstWeek() async {
-    final startDate = DateTime.now();
-    final firstWeek = WeekPlan(
-      title: "Semaine 1",
-      startDate: startDate,
-      days: [
-        for (final d in [
-          "Lundi",
-          "Mardi",
-          "Mercredi",
-          "Jeudi",
-          "Vendredi",
-          "Samedi",
-          "Dimanche"
-        ])
-          DayTraining(dayName: d, type: "Repos"),
-      ],
-    );
-    await weekBox.add(firstWeek);
-    setState(() {});
-  }
-
-  void _nextWeek() {
-    if (currentWeekIndex < weekBox.length - 1) {
-      setState(() => currentWeekIndex++);
-    }
-  }
-
-  void _previousWeek() {
-    if (currentWeekIndex > 0) {
-      setState(() => currentWeekIndex--);
-    }
-  }
-
-  void _editCurrentWeek() {
-    final currentWeek = weekBox.getAt(currentWeekIndex)!;
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EditWeekScreen(weekKey: currentWeek.key),
-      ),
-    ).then((_) => setState(() {}));
-  }
-
-  @override
   Widget build(BuildContext context) {
-    if (weekBox.isEmpty) {
+    final box = DatabaseService.weekBox;
+    final today = DateTime.now();
+
+    if (box.isEmpty) {
       return const Scaffold(
-        backgroundColor: Color(0xFF0A192F),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: Text(
+            "Aucun bloc d'entraînement pour l’instant.",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
       );
     }
 
-    final currentWeek = weekBox.getAt(currentWeekIndex)!;
+    // On récupère le bloc actif par rapport à la date actuelle
+    final active = _findActiveWeekPlan(box.values.toList(), today);
+
+    if (active == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text(
+            "Aucun bloc actif actuellement.",
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+
+    // Calcule la semaine courante dans le bloc
+    final weekIndex = active.weekIndexAt(today);
+
+    // On génère les 7 jours de cette semaine
+    final weekDays = List.generate(7, (i) {
+      final monday = active.startDate.add(Duration(days: weekIndex * 7));
+      return monday.add(Duration(days: i));
+    });
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF112240),
-        title: Text(currentWeek.title),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: _editCurrentWeek,
-          ),
-        ],
-      ),
-      backgroundColor: const Color(0xFF0A192F),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: _previousWeek,
-                  icon: const Icon(Icons.arrow_back_ios),
-                ),
-                Text(
-                  "${currentWeek.startDate.day}/${currentWeek.startDate.month}/${currentWeek.startDate.year}",
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                IconButton(
-                  onPressed: _nextWeek,
-                  icon: const Icon(Icons.arrow_forward_ios),
-                ),
-              ],
+        backgroundColor: Colors.transparent,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Semaine en cours",
+              style: TextStyle(fontSize: 20),
             ),
-          ),
-          Expanded(child: WeeklyScheduleView(week: currentWeek)),
-        ],
+            Text(
+              active.name, // <-- nom du bloc
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFF00BFA6),
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: ListView.builder(
+        itemCount: weekDays.length,
+        itemBuilder: (context, index) {
+          final date = weekDays[index];
+          final training = active.trainingForDate(date);
+          return TrainingCard(date: date, training: training);
+        },
       ),
     );
+  }
+
+  WeekPlan? _findActiveWeekPlan(List<WeekPlan> plans, DateTime date) {
+    for (final plan in plans) {
+      final start = plan.startDate;
+      final end = start.add(Duration(days: plan.weeks * 7));
+      if (date.isAfter(start.subtract(const Duration(days: 1))) &&
+          date.isBefore(end)) {
+        return plan;
+      }
+    }
+    return null;
   }
 }

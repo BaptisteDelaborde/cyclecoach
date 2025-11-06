@@ -1,46 +1,89 @@
 import 'package:hive/hive.dart';
+import 'training.dart';
+
 part 'week_plan.g.dart';
 
 @HiveType(typeId: 2)
 class WeekPlan extends HiveObject {
   @HiveField(0)
-  String title;
+  String name; // ex: "Prépa hiver"
 
   @HiveField(1)
   DateTime startDate;
 
   @HiveField(2)
-  List<DayTraining> days;
+  int weeks; // nombre de semaines du bloc
+
+  @HiveField(3)
+  Map<int, TrainingTemplate> template; // lundi..dimanche
 
   WeekPlan({
-    required this.title,
+    required this.name,
     required this.startDate,
-    required this.days,
+    required this.weeks,
+    required this.template,
   });
+
+  // Récupère l’index de la semaine à partir d’une date
+  int weekIndexAt(DateTime date) {
+    final diff = date.difference(startDate).inDays ~/ 7;
+    return (diff < 0)
+        ? -1
+        : (diff >= weeks)
+        ? weeks - 1
+        : diff;
+  }
+
+  // Génère un Training pour une date donnée
+  Training? trainingForDate(DateTime date) {
+    final weekday = date.weekday; // 1=lundi
+    final model = template[weekday];
+    if (model == null || model.isRest) return null;
+    return Training(
+      title: model.title,
+      duration: model.duration,
+      zone: model.zone,
+      date: date,
+      details: model.details,
+    );
+  }
+
+  // Met à jour un jour-type (et donc toutes les occurrences)
+  void updateTemplateDay(int weekday, TrainingTemplate newTemplate) {
+    template[weekday] = newTemplate;
+    save();
+  }
 }
 
 @HiveType(typeId: 3)
-class DayTraining {
+class TrainingTemplate {
   @HiveField(0)
-  String dayName; // Lundi, Mardi...
+  bool isRest;
 
   @HiveField(1)
-  String type; // Repos ou Entraînement
+  String title;
 
   @HiveField(2)
-  String zone;
-
-  @HiveField(3)
   int duration;
 
-  @HiveField(4)
-  String notes;
+  @HiveField(3)
+  String zone;
 
-  DayTraining({
-    required this.dayName,
-    required this.type,
-    this.zone = '',
-    this.duration = 0,
-    this.notes = '',
+  @HiveField(4)
+  String details;
+
+  TrainingTemplate({
+    required this.isRest,
+    required this.title,
+    required this.duration,
+    required this.zone,
+    this.details = '',
   });
+
+  TrainingTemplate.rest()
+      : isRest = true,
+        title = '',
+        duration = 0,
+        zone = '',
+        details = '';
 }

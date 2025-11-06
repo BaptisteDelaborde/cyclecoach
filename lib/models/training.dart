@@ -1,29 +1,24 @@
 import 'package:hive/hive.dart';
-
 part 'training.g.dart';
 
 @HiveType(typeId: 1)
 class Training extends HiveObject {
   @HiveField(0)
-  String title; // nom de la séance
-
+  String title;       // Nom de la séance
   @HiveField(1)
-  int duration; // en minutes
-
+  int duration;       // Durée (min)
   @HiveField(2)
-  String zone; // exemple : "Z2"
-
+  String zone;        // Zone d’intensité
   @HiveField(3)
-  DateTime date;
-
+  DateTime date;      // Date précise
   @HiveField(4)
-  String notes; // remarques / commentaires facultatifs
+  String details;     // Détail complet (échauffement, bloc, retour...)
 
   Training({
     required this.title,
     required this.duration,
     required this.zone,
     required this.date,
-    this.notes = '',
+    this.details = '',
   });
 }

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'models/training.dart';
 import 'models/week_plan.dart';
-import 'screens/home_screen.dart';
+import 'services/database_service.dart';
+import 'widgets/main_navigation.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Hive.initFlutter();
-  Hive.registerAdapter(WeekPlanAdapter());
-  Hive.registerAdapter(DayTrainingAdapter());
-  await Hive.openBox<WeekPlan>('week_plans');
+  await DatabaseService.init(); // ✅ ouvre bien toutes les box avant le runApp()
 
   runApp(const CycleCoachApp());
 }
@@ -22,18 +21,11 @@ class CycleCoachApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'CycleCoach',
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A192F),
-        primaryColor: const Color(0xFF64FFDA),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFF64FFDA),
-          secondary: Color(0xFF00BFA5),
-          surface: Color(0xFF112240),
-          background: Color(0xFF0A192F),
-        ),
+      theme: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: const Color(0xFF0A0E21),
+        primaryColor: const Color(0xFF00C2CB),
       ),
-      home: const HomeScreen(),
+      home: const MainNavigation(),
     );
   }
 }
