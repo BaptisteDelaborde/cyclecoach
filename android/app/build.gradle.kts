@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    // Le plugin Flutter doit toujours venir après Android et Kotlin
     id("dev.flutter.flutter-gradle-plugin")
 }
 
@@ -10,30 +10,28 @@ android {
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
-    }
-
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.cyclecoach"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
 
+    // ✅ Ajout du support Java 8/11 + desugaring
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true   // <--- ligne magique pour ton erreur
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_11.toString()
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Pour l’instant, on signe avec les clés debug
             signingConfig = signingConfigs.getByName("debug")
         }
     }
@@ -41,4 +39,13 @@ android {
 
 flutter {
     source = "../.."
+}
+
+// ✅ Dépendances
+dependencies {
+    // Permet le “desugaring” (Java 8+ features)
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
+    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7")
+    implementation("androidx.core:core-ktx:1.9.0")
 }
